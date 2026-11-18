@@ -83,7 +83,7 @@ def create_fee_payment(user, montant, provider, phone, purpose, label):
 
 def record_access(user, document, kind: str):
     """Enregistre un gain auteur si l'accès est qualifié (lecteur ≠ auteur, abonné, une fois/jour)."""
-    if not document.auteur_id or document.auteur_id == user.id:
+    if not document.auteur_id or document.auteur_id == user.id or document.auteur.is_back_office:
         return None
     rule = RemunerationRule.objects.filter(categorie=document.categorie).first()
     montant = 0

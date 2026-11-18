@@ -61,8 +61,26 @@ TEMPLATES = [
 ]
 WSGI_APPLICATION = "config.wsgi.application"
 
+# Base de données — au choix :
+#   1) variables séparées : DB_ENGINE (postgresql|mysql), DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT   (recommandé)
+#   2) une URL : DATABASE_URL=postgres://user:pass@host:5432/base   (un « @ » dans le mot de passe s'écrit %40)
+#   3) rien : SQLite locale (développement)
 _db_url = os.getenv("DATABASE_URL", "")
-if _db_url.startswith(("postgres", "mysql")):
+if os.getenv("DB_NAME"):
+    _engine = os.getenv("DB_ENGINE", "mysql").lower()
+    _mysql = _engine.startswith("mysql")
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql" if _mysql else "django.db.backends.postgresql",
+            "NAME": os.getenv("DB_NAME"),
+            "USER": os.getenv("DB_USER", ""),
+            "PASSWORD": os.getenv("DB_PASSWORD", ""),
+            "HOST": os.getenv("DB_HOST", "127.0.0.1"),
+            "PORT": os.getenv("DB_PORT", "3306" if _mysql else "5432"),
+            **({"OPTIONS": {"charset": "utf8mb4"}} if _mysql else {}),
+        }
+    }
+elif _db_url.startswith(("postgres", "mysql")):
     from urllib.parse import unquote, urlparse
 
     u = urlparse(_db_url)
@@ -72,7 +90,7 @@ if _db_url.startswith(("postgres", "mysql")):
             "ENGINE": "django.db.backends.mysql" if _mysql else "django.db.backends.postgresql",
             "NAME": u.path.lstrip("/"),
             "USER": unquote(u.username or ""),
-            "PASSWORD": unquote(u.password or ""),  # un « @ » dans le mot de passe s'écrit %40 dans l'URL
+            "PASSWORD": unquote(u.password or ""),
             "HOST": u.hostname,
             "PORT": u.port or (3306 if _mysql else 5432),
             **({"OPTIONS": {"charset": "utf8mb4"}} if _mysql else {}),

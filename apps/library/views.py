@@ -87,7 +87,8 @@ class DocumentViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Activez votre profil auteur contributeur pour soumettre un document.")
         f = self.request.FILES.get("fichier")
-        serializer.save(auteur=u, taille=f.size if f else 0)
+        extra = {"statut": Document.Statut.PUBLIE, "published_at": timezone.now()} if u.is_back_office else {}
+        serializer.save(auteur=u, taille=f.size if f else 0, **extra)
 
     @action(detail=True, methods=["post"])
     def validate(self, request, pk=None):
