@@ -62,18 +62,20 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 _db_url = os.getenv("DATABASE_URL", "")
-if _db_url.startswith("postgres"):
-    from urllib.parse import urlparse
+if _db_url.startswith(("postgres", "mysql")):
+    from urllib.parse import unquote, urlparse
 
     u = urlparse(_db_url)
+    _mysql = u.scheme.startswith("mysql")
     DATABASES = {
         "default": {
-            "ENGINE": "django.db.backends.postgresql",
+            "ENGINE": "django.db.backends.mysql" if _mysql else "django.db.backends.postgresql",
             "NAME": u.path.lstrip("/"),
-            "USER": u.username,
-            "PASSWORD": u.password,
+            "USER": unquote(u.username or ""),
+            "PASSWORD": unquote(u.password or ""),  # un « @ » dans le mot de passe s'écrit %40 dans l'URL
             "HOST": u.hostname,
-            "PORT": u.port or 5432,
+            "PORT": u.port or (3306 if _mysql else 5432),
+            **({"OPTIONS": {"charset": "utf8mb4"}} if _mysql else {}),
         }
     }
 else:
