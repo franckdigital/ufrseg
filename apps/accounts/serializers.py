@@ -92,3 +92,47 @@ class LoginSerializer(serializers.Serializer):
 class ChangeSecretSerializer(serializers.Serializer):
     old_secret = serializers.CharField()
     new_secret = serializers.CharField(min_length=4)
+
+
+class UserAdminSerializer(serializers.ModelSerializer):
+    """Gestion des comptes par le back-office (rôle modifiable dans les limites de la hiérarchie)."""
+
+    full_name = serializers.CharField(read_only=True)
+    classe_name = serializers.CharField(source="classe.nom", read_only=True, default=None)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True, min_length=4)
+
+    class Meta:
+        model = User
+        fields = ["id", "phone", "email", "first_name", "last_name", "full_name", "role", "matricule", "is_author", "is_class_rep",
+                  "classe", "classe_name", "is_active", "has_pin", "registered_by_voice", "date_joined", "last_login", "password"]
+        read_only_fields = ["id", "has_pin", "registered_by_voice", "date_joined", "last_login"]
+
+    def validate_phone(self, value):
+        try:
+            phone = normalize_phone(value)
+        except ValueError as e:
+            raise serializers.ValidationError(str(e))
+        qs = User.objects.filter(phone=phone)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("Ce numéro est déjà enregistré.")
+        return phone
+
+    def validate_email(self, value):
+        if not value:
+            return None
+        qs = User.objects.filter(email__iexact=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("Cet e-mail est déjà utilisé.")
+        return value
+
+    def validate_role(self, value):
+        from .roles import can_manage
+
+        actor = self.context["request"].user
+        if not can_manage(actor.role, value):
+            raise serializers.ValidationError("Vous n'avez pas le droit d'attribuer ce rôle.")
+        return value

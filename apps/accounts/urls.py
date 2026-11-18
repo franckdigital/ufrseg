@@ -14,5 +14,7 @@ urlpatterns = [
     path("me/", views.MeView.as_view()),
     path("change-secret/", views.ChangeSecretView.as_view()),
     path("classmates/", views.ClassmatesView.as_view()),
+    path("roles/", views.RolesView.as_view()),
+    path("system/", views.SystemView.as_view()),
     path("", include(router.urls)),
 ]

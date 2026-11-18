@@ -99,6 +99,11 @@ elif _db_url.startswith(("postgres", "mysql")):
 else:
     DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}
 
+# Garde-fou : en production, jamais de SQLite silencieuse (ex. .env illisible par l'utilisateur du service).
+if not DEBUG and DATABASES["default"]["ENGINE"].endswith("sqlite3"):
+    raise RuntimeError("Base de données non configurée : renseignez DB_ENGINE/DB_NAME/DB_USER/DB_PASSWORD dans backend/.env "
+                       "(le fichier doit être lisible par l'utilisateur du service, ex. chown root:www-data + chmod 640).")
+
 AUTH_USER_MODEL = "accounts.User"
 # Les PIN à 4 chiffres sont autorisés : pas de validateurs de complexité côté API.
 AUTH_PASSWORD_VALIDATORS = []
